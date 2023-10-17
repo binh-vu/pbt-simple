@@ -18,10 +18,10 @@ def check_upgrade():
     latest_version = PyPI.get_instance().get_latest_version("pbt-simple")
     if latest_version is not None and version != latest_version:
         logger.warning(
-            f"You are using an outdated version of pbt. The latest version is {latest_version}, while you are using {version}."
+            f"You are using an outdated version of sbt (pbt-simple). The latest version is {latest_version}, while you are using {version}."
         )
     else:
-        logger.trace("You are using the latest version of pbt.")
+        logger.trace("You are using the latest version of sbt (pbt-simple).")
 
 
 @click.group(

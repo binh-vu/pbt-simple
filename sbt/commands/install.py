@@ -39,7 +39,7 @@ PASSTHROUGH_ENVS = [
 
 
 @click.command()
-@click.argument("package")
+@click.argument("package", default="")
 @click.option("--cwd", default=".", help="Override current working directory")
 @click.option(
     "--ignore-invalid-pkg",
@@ -73,6 +73,17 @@ def install(
         cfg.ignore_directory_names,
         ignore_invalid_package=ignore_invalid_pkg,
     )
+
+    if package == "":
+        # use the package located in the current directory
+        for pkg in packages.values():
+            if pkg.location == cfg.cwd:
+                package = pkg.name
+                break
+        else:
+            raise ValueError(
+                f"Cannot find a package in the current directory {cfg.cwd}"
+            )
 
     # now install the packages
     # step 1: gather all dependencies in one file and install it.
