@@ -20,6 +20,8 @@ class Package:
     location: Path
     type: PackageType
 
+    include: list[str]
+
     dependencies: dict[str, DepConstraints]
 
 

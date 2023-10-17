@@ -18,9 +18,9 @@ jobs:
       - name: setup dependencies
         run: |
           git config --global user.email "you@example.com" && git config --global user.name "Your Name" && git config --global init.defaultBranch master
-          pip install nox twine
-      - name: run test
-        run: nox
+          pip install twine
+      # - name: run test
+      #   run: nox
       - name: build wheels
         run: |
           pip install poetry

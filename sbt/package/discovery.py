@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from operator import attrgetter
 from pathlib import Path
@@ -116,7 +117,14 @@ def parse_maturin_project(cfg: dict, loc: Path) -> Package:
                 continue
             dependencies[k] = specs
 
-    return Package(name, version, loc, PackageType.Maturin, dependencies)
+    # not supported yet in pep-621
+    # https://peps.python.org/pep-0621/#specify-files-to-include-when-building
+    include = []
+    if "tool" in cfg and "maturin" in cfg["tool"]:
+        if "include" in cfg["tool"]["maturin"]:
+            include = cfg["tool"]["maturin"]["include"]
+
+    return Package(name, version, loc, PackageType.Maturin, include, dependencies)
 
 
 def parse_poetry_project(cfg: dict, loc: Path) -> Package:
@@ -134,7 +142,14 @@ def parse_poetry_project(cfg: dict, loc: Path) -> Package:
                 key=attrgetter("constraint"),
             )
 
-    return Package(name, version, loc, PackageType.Poetry, dependencies)
+    # see https://python-poetry.org/docs/pyproject/#include-and-exclude
+    # and https://python-poetry.org/docs/pyproject/#packages
+    include = cfg["tool"]["poetry"].get("include", [])
+    for pkg_cfg in cfg["tool"]["poetry"].get("packages", []):
+        include.append(os.path.join(pkg_cfg.get("from", ""), pkg_cfg["include"]))
+    include = sorted(set(include))
+
+    return Package(name, version, loc, PackageType.Poetry, include, dependencies)
 
 
 def parse_pep518_pkgname_with_extra(name: str) -> tuple[str, list[str]]:

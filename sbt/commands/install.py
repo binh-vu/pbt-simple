@@ -10,6 +10,7 @@ import click
 from loguru import logger
 from tomlkit.api import document, dumps, inline_table, loads, nl, table
 from tomlkit.items import Array, KeyType, SingleKey, Trivia
+from tqdm.auto import tqdm
 
 from sbt.config import PBTConfig
 from sbt.misc import (
@@ -112,17 +113,28 @@ def install(
         {depname: depspecs for depname, (_, depspecs) in thirdparty_pkgs.items()},
         cfg,
     )
-    for pkg in packages.values():
-        if pkg.name == package:
-            continue
-        install_bare_pkg(pkg, cfg)
+
+    local_dep_pkgs = [pkg for pkg in packages.values() if pkg.name != package]
+    logger.info(
+        "Installing local packages: {}", ", ".join(pkg.name for pkg in local_dep_pkgs)
+    )
+    pkg_venv_path = venv_path(
+        packages[package].name,
+        packages[package].location,
+        cfg.python_virtualenvs_path,
+        cfg.get_python_path(),
+    )
+    for pkg in tqdm(local_dep_pkgs):
+        install_bare_pkg(pkg, cfg, pkg_venv_path)
 
     # step 3: check if we need to build and install any extension module
 
 
 def install_bare_pkg(pkg: Package, cfg: PBTConfig, virtualenv: Optional[Path] = None):
     """Install a package without any dependencies in editable mode"""
-    with mask_file(pkg.location / "pyproject.toml"):
+    with mask_file(pkg.location / "pyproject.toml"), mask_file(
+        pkg.location / "poetry.lock"
+    ):
         with open(pkg.location / "pyproject.toml", "w") as f:
             doc = document()
 
@@ -131,6 +143,8 @@ def install_bare_pkg(pkg: Package, cfg: PBTConfig, virtualenv: Optional[Path] = 
             tbl.add("version", pkg.version)
             tbl.add("description", "")
             tbl.add("authors", [])
+            if sum(int(x != pkg.name) for x in pkg.include) > 0:
+                tbl.add("packages", [{"include": x} for x in pkg.include])
 
             doc.add(SingleKey("tool.poetry", t=KeyType.Bare), tbl)
 
@@ -142,7 +156,7 @@ def install_bare_pkg(pkg: Package, cfg: PBTConfig, virtualenv: Optional[Path] = 
 
             f.write(dumps(doc))
 
-        install_poetry_package(pkg, cfg, virtualenv)
+        install_poetry_package(pkg, cfg, virtualenv, quiet=True)
 
 
 def install_pkg_dependencies(
@@ -159,6 +173,8 @@ def install_pkg_dependencies(
         tbl.add("version", pkg.version)
         tbl.add("description", "")
         tbl.add("authors", [])
+        if sum(int(x != pkg.name) for x in pkg.include) > 0:
+            tbl.add("packages", [{"include": x} for x in pkg.include])
 
         doc.add(SingleKey("tool.poetry", t=KeyType.Bare), tbl)
 
@@ -215,7 +231,10 @@ def install_pkg_dependencies(
 
 
 def install_poetry_package(
-    pkg: Package, cfg: PBTConfig, virtualenv: Optional[Path] = None
+    pkg: Package,
+    cfg: PBTConfig,
+    virtualenv: Optional[Path] = None,
+    quiet: bool = False,
 ):
     if virtualenv is None:
         virtualenv = venv_path(
@@ -231,20 +250,25 @@ def install_poetry_package(
 
     if (pkg.location / "poetry.lock").exists():
         try:
-            exec("poetry lock --check", cwd=pkg.location, env=env)
+            exec(
+                "poetry check --lock" + (" -q" if quiet else ""),
+                cwd=pkg.location,
+                env=env,
+            )
         except ExecProcessError:
             logger.debug(
-                "poetry.lock is inconsistent with pyproject.toml, updating lock file..."
+                "Package {} poetry.lock is inconsistent with pyproject.toml, updating lock file...",
+                pkg.name,
             )
             exec(
-                "poetry lock --no-update",
+                "poetry lock --no-update" + (" -q" if quiet else ""),
                 cwd=pkg.location,
                 capture_stdout=False,
                 env=env,
             )
 
     exec(
-        f"poetry install",
+        f"poetry install" + (" -q" if quiet else ""),
         cwd=pkg.location,
         capture_stdout=False,
         env=env,

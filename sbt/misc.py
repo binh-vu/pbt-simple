@@ -162,12 +162,19 @@ def mask_file(
         file_path: The path to the file to mask
     """
     file_path = str(file_path)
-    assert os.path.isfile(file_path)
-    try:
-        os.rename(file_path, file_path + ".tmp")
-        yield None
-    finally:
-        os.rename(file_path + ".tmp", file_path)
+    if not os.path.exists(file_path):
+        try:
+            yield None
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    else:
+        assert os.path.isfile(file_path)
+        try:
+            os.rename(file_path, file_path + ".tmp")
+            yield None
+        finally:
+            os.rename(file_path + ".tmp", file_path)
 
 
 def venv_path(
