@@ -64,6 +64,7 @@ def install(
     ignore_invalid_dependency: bool = False,
     verbose: bool = False,
 ):
+    cwd = os.path.abspath(cwd)
     cfg = PBTConfig.from_dir(cwd)
 
     # discovery packages

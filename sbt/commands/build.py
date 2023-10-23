@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import zipfile
 from pathlib import Path
@@ -30,6 +31,7 @@ from sbt.package.discovery import discover_packages
     help="increase verbosity",
 )
 def build(package: str, cwd: str = ".", release: bool = False, verbose: bool = False):
+    cwd = os.path.abspath(cwd)
     cfg = PBTConfig.from_dir(cwd)
 
     # discovery packages

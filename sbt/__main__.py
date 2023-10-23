@@ -5,6 +5,7 @@ import click
 from loguru import logger
 
 from sbt.commands.build import build
+from sbt.commands.git import git
 from sbt.commands.install import install
 from sbt.registry.pypi import PyPI
 
@@ -34,6 +35,7 @@ def cli():
 
 cli.add_command(install)
 cli.add_command(build)
+cli.add_command(git)
 
 if __name__ == "__main__":
     cli()
