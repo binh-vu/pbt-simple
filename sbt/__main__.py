@@ -6,7 +6,7 @@ from loguru import logger
 
 from sbt.commands.build import build
 from sbt.commands.git import git
-from sbt.commands.install import install
+from sbt.commands.install import add, install
 from sbt.registry.pypi import PyPI
 
 try:
@@ -34,6 +34,7 @@ def cli():
 
 
 cli.add_command(install)
+cli.add_command(add)
 cli.add_command(build)
 cli.add_command(git)
 

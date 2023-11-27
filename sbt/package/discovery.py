@@ -22,10 +22,12 @@ from sbt.package.package import (
 
 def discover_packages(
     root: Path,
+    cache_dir: Path,
     ignore_dirs: set[Path],
     ignore_dirnames: set[str],
     ignore_invalid_package: bool = False,
 ):
+    """Find all packages in the given directory and manually linked/installed packages."""
     candidate_pyprojects = get_candidate_pyprojects(root, ignore_dirs, ignore_dirnames)
 
     # mapping from package directory to its configuration
@@ -45,6 +47,26 @@ def discover_packages(
                 f"Duplicate package {pkg.name}: found in {pkg.location} and {pkgs[pkg.name].location}"
             )
         pkgs[pkg.name] = pkg
+
+    # now find the manually linked/installed packages
+    for pkg in pkgs.values():
+        pkg_cache_dir = cache_dir / pkg.name
+        pkg_cache_dir.mkdir(exist_ok=True, parents=True)
+
+        for loc in pkg.find_manually_installed_dependencies(pkg_cache_dir):
+            try:
+                pkg = parse_pep518_pyproject(loc)
+            except InvalidPackageError as e:
+                if not ignore_invalid_package:
+                    raise e
+                logger.warning(f"An package at {loc} is invalid. Ignore it. Error: {e}")
+                continue
+
+            if pkg.name in pkgs:
+                raise RuntimeError(
+                    f"Duplicate package {pkg.name}: found in {pkg.location} and {pkgs[pkg.name].location}"
+                )
+            pkgs[pkg.name] = pkg
 
     return pkgs
 

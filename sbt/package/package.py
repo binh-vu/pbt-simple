@@ -3,9 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, Sequence
 
+import serde.json
 from semver import VersionInfo
+
+if TYPE_CHECKING:
+    from sbt.config import PBTConfig
 
 
 class PackageType(str, Enum):
@@ -23,6 +27,25 @@ class Package:
     include: list[str]
 
     dependencies: dict[str, DepConstraints]
+
+    def find_manually_installed_dependencies(self, cache_dir: Path) -> list[Path]:
+        """Find dependencies that were installed manually (via command line) into the package environment"""
+        cache_file = self._get_manually_installed_dep_file(cache_dir)
+        if not cache_file.exists():
+            return []
+        return [Path(loc) for name, loc in serde.json.deser(cache_file)]
+
+    def save_manually_installed_dependencies(
+        self, cache_dir: Path, manually_installed_deps: Sequence[Path]
+    ) -> None:
+        """Save the list of dependencies of the package that were installed manually into the package environment"""
+        serde.json.ser(
+            [str(x) for x in manually_installed_deps],
+            self._get_manually_installed_dep_file(cache_dir),
+        )
+
+    def _get_manually_installed_dep_file(self, cache_dir: Path) -> Path:
+        return cache_dir / "manually_installed_dependencies.json"
 
 
 @dataclass(eq=True)

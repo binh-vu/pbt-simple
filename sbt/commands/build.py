@@ -37,6 +37,7 @@ def build(package: str, cwd: str = ".", release: bool = False, verbose: bool = F
     # discovery packages
     packages = discover_packages(
         cfg.cwd,
+        cfg.cache_dir,
         cfg.ignore_directories,
         cfg.ignore_directory_names,
         ignore_invalid_package=True,

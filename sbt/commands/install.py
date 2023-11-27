@@ -21,7 +21,13 @@ from sbt.misc import (
     mask_file,
     venv_path,
 )
-from sbt.package.discovery import discover_packages, parse_version, parse_version_spec
+from sbt.package.discovery import (
+    discover_packages,
+    parse_pep518_pyproject,
+    parse_version,
+    parse_version_spec,
+)
+from sbt.package.graph import PkgGraph
 from sbt.package.package import DepConstraint, DepConstraints, Package
 
 # environment variables that will be passed to the subprocess
@@ -64,75 +70,184 @@ def install(
     ignore_invalid_dependency: bool = False,
     verbose: bool = False,
 ):
+    """Install a package and its local dependencies in editable mode"""
     cwd = os.path.abspath(cwd)
     cfg = PBTConfig.from_dir(cwd)
 
     # discovery packages
     packages = discover_packages(
         cfg.cwd,
+        cfg.cache_dir,
         cfg.ignore_directories,
         cfg.ignore_directory_names,
         ignore_invalid_package=ignore_invalid_pkg,
     )
-
+    loc2pkg = {pkg.location: pkg for pkg in packages.values()}
     if package == "":
         # use the package located in the current directory
-        for pkg in packages.values():
-            if pkg.location == cfg.cwd:
-                package = pkg.name
-                break
+        if cfg.cwd in loc2pkg:
+            package = loc2pkg[cfg.cwd].name
         else:
             raise ValueError(
                 f"Cannot find a package in the current directory {cfg.cwd}"
             )
 
-    # now install the packages
-    # step 1: gather all dependencies in one file and install it.
+    install_pkg(packages[package], packages, cfg, ignore_invalid_dependency, None)
+
+
+@click.command()
+@click.argument("dependency")
+@click.option("--package", default="", help="The target package to add dependency to")
+@click.option("--cwd", default=".", help="Override current working directory")
+@click.option("--no-dep-dep", is_flag=True, help="Do not install dependencies of the dependency")
+@click.option(
+    "--ignore-invalid-pkg",
+    is_flag=True,
+    help="whether to ignore invalid packages",
+)
+@click.option(
+    "--ignore-invalid-dependency",
+    is_flag=True,
+    help="whether to ignore invalid dependencies",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help="increase verbosity",
+)
+def add(
+    dependency: str,
+    package: str = "",
+    cwd: str = ".",
+    no_dep_dep: bool = False,
+    ignore_invalid_pkg: bool = False,
+    ignore_invalid_dependency: bool = False,
+    verbose: bool = False,
+):
+    """Add a local package as a dependency to the target package"""
+    cwd = os.path.abspath(cwd)
+    cfg = PBTConfig.from_dir(cwd)
+
+    # discovery packages
+    packages = discover_packages(
+        cfg.cwd,
+        cfg.cache_dir,
+        cfg.ignore_directories,
+        cfg.ignore_directory_names,
+        ignore_invalid_package=ignore_invalid_pkg,
+    )
+    loc2pkg = {pkg.location: pkg for pkg in packages.values()}
+    if package == "":
+        # use the package located in the current directory
+        if cfg.cwd in loc2pkg:
+            package = loc2pkg[cfg.cwd].name
+        else:
+            raise ValueError(
+                f"Cannot find a package in the current directory {cfg.cwd}"
+            )
+
+    # step 1: get the dependency package and add its to the list of discover packages
+    if dependency not in packages:
+        # dependency is a path
+        deppkg = parse_pep518_pyproject(Path(dependency))
+        packages[deppkg.name] = deppkg
+    else:
+        deppkg = packages[dependency]
+
+    # step 2: update the list of manually installed
+    pkg_cache_dir = cfg.pkg_cache_dir(packages[package])
+    manual_deps = packages[package].find_manually_installed_dependencies(pkg_cache_dir)
+    manual_deps.append(deppkg.location)
+    packages[package].save_manually_installed_dependencies(
+        pkg_cache_dir, sorted(set(manual_deps))
+    )
+
+    # step 3: gather dependencies of the package -- include the one from manually installed packages
+    if no_dep_dep:
+        pkg_venv_path = venv_path(
+            packages[package].name,
+            packages[package].location,
+            cfg.python_virtualenvs_path,
+            cfg.get_python_path(),
+        )
+        install_bare_pkg(packages[package], cfg, pkg_venv_path)
+    else:
+        install_pkg(packages[package], packages, cfg, ignore_invalid_dependency, [deppkg])
+
+
+def install_pkg(
+    target_pkg: Package,
+    packages: dict[str, Package],
+    cfg: PBTConfig,
+    ignore_invalid_dependency: bool,
+    local_dep_pkgs: Optional[list[Package]],
+):
+    loc2pkg = {pkg.location: pkg for pkg in packages.values()}
+
+    # step 0: gather dependencies of the package -- include the one from manually installed packages
+    target_pkg.dependencies.update(
+        {
+            (p := loc2pkg[loc]).name: [
+                DepConstraint(version_spec="=={}".format(p.version))
+            ]
+            for loc in target_pkg.find_manually_installed_dependencies(
+                cfg.pkg_cache_dir(target_pkg)
+            )
+        }
+    )
+    pkg_graph = PkgGraph.from_pkgs(packages)
+
     thirdparty_pkgs: dict[str, tuple[set[str], DepConstraints]] = {}
     invalid_thirdparty_pkgs: set[str] = set()
-    for pkg in packages.values():
-        for depname, depspecs in pkg.dependencies.items():
-            if depname in packages or depname in invalid_thirdparty_pkgs:
-                continue
-            if depname not in thirdparty_pkgs:
-                thirdparty_pkgs[depname] = ({pkg.name}, depspecs)
-                continue
 
-            try:
-                thirdparty_pkgs[depname][0].add(pkg.name)
-                thirdparty_pkgs[depname] = (
-                    thirdparty_pkgs[depname][0],
-                    find_common_specs(thirdparty_pkgs[depname][1], depspecs),
-                )
-            except IncompatibleDependencyError:
-                logger.error(
-                    "Encounter an incompatible dependency {}. Found it in:\n{}",
-                    depname,
-                    "\n".join(
-                        f"\t- {packages[pkgname].location}"
-                        for pkgname in thirdparty_pkgs[depname][0]
-                    ),
-                )
+    for thirdparty_pkg in pkg_graph.third_party_dependencies(target_pkg.name):
+        assert thirdparty_pkg.name not in thirdparty_pkgs
+        depspecs = None
+        for p, pc in thirdparty_pkg.invert_dependencies.items():
+            if depspecs is None:
+                pc = depspecs
+            else:
+                try:
+                    depspecs = find_common_specs(depspecs, pc)
+                except IncompatibleDependencyError:
+                    logger.error(
+                        "Encounter an incompatible dependency {}. Found it in:\n{}",
+                        thirdparty_pkg.name,
+                        "\n".join(
+                            f"\t- {packages[pkgname].location}"
+                            for pkgname in thirdparty_pkg.invert_dependencies.keys()
+                        ),
+                    )
 
-                if ignore_invalid_dependency:
-                    invalid_thirdparty_pkgs.add(depname)
-                else:
-                    raise
+                    if ignore_invalid_dependency:
+                        invalid_thirdparty_pkgs.add(thirdparty_pkg.name)
+                    else:
+                        raise
+        assert depspecs is not None
+        thirdparty_pkgs[thirdparty_pkg.name] = (
+            set(thirdparty_pkg.invert_dependencies.keys()),
+            depspecs,
+        )
 
-    # step 2: install local packages in editable mode
+    # now install the target package
+    # step 1: gather all dependencies in one file and install it.
     install_pkg_dependencies(
-        packages[package],
+        target_pkg,
         {depname: depspecs for depname, (_, depspecs) in thirdparty_pkgs.items()},
         cfg,
     )
 
-    local_dep_pkgs = [pkg for pkg in packages.values() if pkg.name != package]
+    # step 2: install all local packages in editable mode
+    if local_dep_pkgs is None:
+        local_dep_pkgs = [pkg for pkg in pkg_graph.local_dependencies(target_pkg.name)]
+
     logger.info(
         "Installing local packages: {}", ", ".join(pkg.name for pkg in local_dep_pkgs)
     )
     pkg_venv_path = venv_path(
-        packages[package].name,
-        packages[package].location,
+        target_pkg.name,
+        target_pkg.location,
         cfg.python_virtualenvs_path,
         cfg.get_python_path(),
     )
@@ -140,6 +255,7 @@ def install(
         install_bare_pkg(pkg, cfg, pkg_venv_path)
 
     # step 3: check if we need to build and install any extension module
+    # TODO: implement this -- for now, users can use the `build` command to build manually
 
 
 def install_bare_pkg(pkg: Package, cfg: PBTConfig, virtualenv: Optional[Path] = None):
@@ -352,3 +468,6 @@ def serialize_dep_specs(specs: DepConstraints) -> Array:
     if len(items) == 1:
         return items[0]
     return Array(items, Trivia(), multiline=True)
+
+
+# def load_external_dependencies(pkg: Package, cfg: PBTConfig, packages: dict[str, Package]) -> dict[str, Package]:
