@@ -144,3 +144,9 @@ class PBTConfig:
             return str(self.python_path)
         else:
             return sys.executable
+        
+    @cache_method()
+    def get_python_version(self) -> str:
+        version = "".join(exec([self.get_python_path(), "--version"])).strip()
+        assert version.startswith("Python "), version
+        return version[len("Python ") :].strip()
