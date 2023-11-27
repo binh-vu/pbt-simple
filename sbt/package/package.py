@@ -6,9 +6,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 import orjson
-
 from semver import VersionInfo
-
 
 
 class PackageType(str, Enum):
@@ -38,9 +36,11 @@ class Package:
         self, cache_dir: Path, manually_installed_deps: Sequence[Path]
     ) -> None:
         """Save the list of dependencies of the package that were installed manually into the package environment"""
-        self._get_manually_installed_dep_file(cache_dir).write_bytes(orjson.dumps(
-            [str(x) for x in manually_installed_deps],
-        ))
+        self._get_manually_installed_dep_file(cache_dir).write_bytes(
+            orjson.dumps(
+                [str(x) for x in manually_installed_deps], option=orjson.OPT_INDENT_2
+            )
+        )
 
     def _get_manually_installed_dep_file(self, cache_dir: Path) -> Path:
         return cache_dir / "manually_installed_dependencies.json"
