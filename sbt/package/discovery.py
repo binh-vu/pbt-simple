@@ -130,7 +130,7 @@ def parse_maturin_project(cfg: dict, loc: Path) -> Package:
             if item.find(" ") == -1:
                 # it should be a self reference dependency, so we just ignore it
                 k, extras = parse_pep518_pkgname_with_extra(item)
-                assert k == name
+                assert k == name, f"{k} doesn't have version (because of no space -- if it does have version, add space to format it nicely), so it must be self-reference"
                 continue
 
             k, specs = parse_pep518_dep_spec(item)
