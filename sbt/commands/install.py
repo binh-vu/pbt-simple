@@ -206,7 +206,7 @@ def install_pkg(
         depspecs = None
         for p, pc in thirdparty_pkg.invert_dependencies.items():
             if depspecs is None:
-                pc = depspecs
+                depspecs = pc
             else:
                 try:
                     depspecs = find_common_specs(depspecs, pc)
