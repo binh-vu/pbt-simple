@@ -32,7 +32,7 @@ class Package:
         cache_file = self._get_manually_installed_dep_file(cache_dir)
         if not cache_file.exists():
             return []
-        return [Path(loc) for name, loc in orjson.loads(cache_file.read_text())]
+        return [Path(loc) for loc in orjson.loads(cache_file.read_text())]
 
     def save_manually_installed_dependencies(
         self, cache_dir: Path, manually_installed_deps: Sequence[Path]
