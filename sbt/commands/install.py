@@ -8,10 +8,6 @@ from typing import Any, Optional, cast
 
 import click
 from loguru import logger
-from tomlkit.api import document, dumps, inline_table, loads, nl, table
-from tomlkit.items import Array, KeyType, SingleKey, Trivia
-from tqdm.auto import tqdm
-
 from sbt.config import PBTConfig
 from sbt.misc import (
     ExecProcessError,
@@ -29,6 +25,9 @@ from sbt.package.discovery import (
 )
 from sbt.package.graph import PkgGraph
 from sbt.package.package import DepConstraint, DepConstraints, Package
+from tomlkit.api import document, dumps, inline_table, loads, nl, table
+from tomlkit.items import Array, KeyType, SingleKey, Trivia
+from tqdm.auto import tqdm
 
 # environment variables that will be passed to the subprocess
 PASSTHROUGH_ENVS = [
@@ -99,7 +98,9 @@ def install(
 @click.argument("dependency")
 @click.option("--package", default="", help="The target package to add dependency to")
 @click.option("--cwd", default=".", help="Override current working directory")
-@click.option("--no-dep-dep", is_flag=True, help="Do not install dependencies of the dependency")
+@click.option(
+    "--no-dep-dep", is_flag=True, help="Do not install dependencies of the dependency"
+)
 @click.option(
     "--ignore-invalid-pkg",
     is_flag=True,
@@ -173,7 +174,9 @@ def add(
         )
         install_bare_pkg(packages[package], cfg, pkg_venv_path)
     else:
-        install_pkg(packages[package], packages, cfg, ignore_invalid_dependency, [deppkg])
+        install_pkg(
+            packages[package], packages, cfg, ignore_invalid_dependency, [deppkg]
+        )
 
 
 def install_pkg(
@@ -248,17 +251,20 @@ def install_pkg(
         cfg.python_virtualenvs_path,
         cfg.get_python_path(),
     )
-    
+
     if len(local_dep_pkgs) > 0:
         logger.info(
-            "Installing local packages: {}", ", ".join(pkg.name for pkg in local_dep_pkgs)
+            "Installing local packages: {}",
+            ", ".join(pkg.name for pkg in local_dep_pkgs),
         )
         for pkg in tqdm(local_dep_pkgs):
             install_bare_pkg(pkg, cfg, pkg_venv_path)
 
     # step 3: check if we need to build and install any extension module
     # TODO: implement this -- for now, users can use the `build` command to build manually
-    logger.info("Finished installing package {} to env {}", target_pkg.name, pkg_venv_path)
+    logger.info(
+        "Finished installing package {} to env {}", target_pkg.name, pkg_venv_path
+    )
 
 
 def install_bare_pkg(pkg: Package, cfg: PBTConfig, virtualenv: Optional[Path] = None):
@@ -304,14 +310,15 @@ def install_pkg_dependencies(
         tbl.add("version", pkg.version)
         tbl.add("description", "")
         tbl.add("authors", [])
-        
+
         if sum(int(x != pkg.name) for x in pkg.include) > 0:
             tbl.add("packages", [{"include": x} for x in pkg.include])
 
         doc.add(SingleKey("tool.poetry", t=KeyType.Bare), tbl)
 
         tbl = table()
-        tbl.add("python", f"=={cfg.get_python_version()}")
+        if "python" not in deps:
+            tbl.add("python", f"=={cfg.get_python_version()}")
         for dep, specs in deps.items():
             tbl.add(dep, serialize_dep_specs(specs))
         doc.add(nl())
