@@ -49,7 +49,7 @@ def discover_packages(
         pkgs[pkg.name] = pkg
 
     # now find the manually linked/installed packages
-    for pkg in pkgs.values():
+    for pkg in list(pkgs.values()):
         pkg_cache_dir = cache_dir / pkg.name
         pkg_cache_dir.mkdir(exist_ok=True, parents=True)
 
