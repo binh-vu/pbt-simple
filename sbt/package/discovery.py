@@ -125,7 +125,7 @@ def parse_maturin_project(cfg: dict, loc: Path) -> Package:
         k, specs = parse_pep518_dep_spec(item)
         dependencies[k] = specs
 
-    for extra, extra_deps in cfg["project"]["optional-dependencies"].items():
+    for extra, extra_deps in cfg["project"].get("optional-dependencies", {}).items():
         for item in extra_deps:
             if item.find(" ") == -1:
                 # it should be a self reference dependency, so we just ignore it
