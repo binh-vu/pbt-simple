@@ -8,6 +8,10 @@ from typing import Any, Optional, cast
 
 import click
 from loguru import logger
+from tomlkit.api import document, dumps, inline_table, loads, nl, table
+from tomlkit.items import Array, KeyType, SingleKey, Trivia
+from tqdm.auto import tqdm
+
 from sbt.config import PBTConfig
 from sbt.misc import (
     ExecProcessError,
@@ -25,9 +29,6 @@ from sbt.package.discovery import (
 )
 from sbt.package.graph import PkgGraph
 from sbt.package.package import DepConstraint, DepConstraints, Package
-from tomlkit.api import document, dumps, inline_table, loads, nl, table
-from tomlkit.items import Array, KeyType, SingleKey, Trivia
-from tqdm.auto import tqdm
 
 # environment variables that will be passed to the subprocess
 PASSTHROUGH_ENVS = [
@@ -36,8 +37,10 @@ PASSTHROUGH_ENVS = [
     "CXX",
     "LIBCLANG_PATH",
     "LD_LIBRARY_PATH",
+    "DYLD_LIBRARY_PATH",
     "C_INCLUDE_PATH",
     "CPLUS_INCLUDE_PATH",
+    "HOME",
     "CARGO_HOME",
     "RUSTUP_HOME",
 ]
