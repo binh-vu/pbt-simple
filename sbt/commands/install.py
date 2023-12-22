@@ -60,6 +60,11 @@ PASSTHROUGH_ENVS = [
     help="whether to ignore invalid dependencies",
 )
 @click.option(
+    "--all-packages",
+    is_flag=True,
+    help="Install all discovered packages as dependencies of the target one",
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -70,6 +75,7 @@ def install(
     cwd: str = ".",
     ignore_invalid_pkg: bool = False,
     ignore_invalid_dependency: bool = False,
+    all_packages: bool = False,
     verbose: bool = False,
 ):
     """Install a package and its local dependencies in editable mode"""
@@ -94,7 +100,12 @@ def install(
                 f"Cannot find a package in the current directory {cfg.cwd}"
             )
 
-    install_pkg(packages[package], packages, cfg, ignore_invalid_dependency, None)
+    local_dep_pkgs = None
+    if all_packages:
+        local_dep_pkgs = [pkg for pkg in packages.values() if pkg.name != package]
+    install_pkg(
+        packages[package], packages, cfg, ignore_invalid_dependency, local_dep_pkgs
+    )
 
 
 @click.command()
