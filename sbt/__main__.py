@@ -2,8 +2,8 @@ import importlib.metadata
 import sys
 
 import click
+import sbt.commands.list
 from loguru import logger
-
 from sbt.commands.build import build
 from sbt.commands.git import git
 from sbt.commands.install import add, install
@@ -37,6 +37,7 @@ cli.add_command(install)
 cli.add_command(add)
 cli.add_command(build)
 cli.add_command(git)
+cli.add_command(sbt.commands.list.list)
 
 if __name__ == "__main__":
     cli()
