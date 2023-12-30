@@ -8,8 +8,6 @@ from typing import cast
 
 import semver
 from loguru import logger
-from tomlkit.api import loads
-
 from sbt.misc import InvalidPackageError
 from sbt.package.package import (
     DepConstraint,
@@ -18,6 +16,7 @@ from sbt.package.package import (
     PackageType,
     VersionSpec,
 )
+from tomlkit.api import loads
 
 
 def discover_packages(
@@ -41,6 +40,9 @@ def discover_packages(
                 raise e
             logger.warning(f"An package at {loc} is invalid. Ignore it. Error: {e}")
             continue
+        except Exception as e:
+            logger.error(f"An error occurred when parsing {loc}")
+            raise e
 
         if pkg.name in pkgs:
             raise RuntimeError(
@@ -130,7 +132,9 @@ def parse_maturin_project(cfg: dict, loc: Path) -> Package:
             if item.find(" ") == -1:
                 # it should be a self reference dependency, so we just ignore it
                 k, extras = parse_pep518_pkgname_with_extra(item)
-                assert k == name, f"{k} doesn't have version (because of no space -- if it does have version, add space to format it nicely), so it must be self-reference"
+                assert (
+                    k == name
+                ), f"{k} doesn't have version (because of no space -- if it does have version, add space to format it nicely), so it must be self-reference"
                 continue
 
             k, specs = parse_pep518_dep_spec(item)
