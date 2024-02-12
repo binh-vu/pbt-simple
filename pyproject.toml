@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pbt-simple"
-version = "1.6.2"
+version = "1.6.3"
 description = "A simpler version of [PBT](https://github.com/binh-vu/pbt) for installing a package (and its local dependencies in editable mode) and build extension modules written in PYO3."
 authors = ["Binh Vu <binh@toan2.com>"]
 license = "MIT"
@@ -13,7 +13,7 @@ repository = "https://github.com/binh-vu/pbt-simple"
 sbt = 'sbt.__main__:cli'
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 orjson = "^3.9.9"
 click = "^8.1.7"
 tomlkit = "^0.12.1"
