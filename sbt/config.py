@@ -38,7 +38,7 @@ class PBTConfig:
     # directory to store the built artifacts for release (relative to each package's location)
     distribution_dir: Path = Path("./dist")
     # the virtualenv directory (default is .venv in the project root directory)
-    python_virtualenvs_path: str = "./.venv"
+    python_virtualenv_path: str = "./.venv"
     # python executable to use for building and installing packages, default (None) is the sys.executable
     python_path: Optional[Path] = None
     # path to the directory containing dependencies
@@ -112,6 +112,19 @@ class PBTConfig:
         else:
             python_path = cfg["python_path"]
 
+        python_virtualenv_path = cfg.get(
+            (
+                "python_virtualenv_path"
+                if "python_virtualenvs_path" not in cfg
+                else "python_virtualenvs_path"
+            ),
+            os.environ.get("PYTHON_VIRTUALENV_PATH", "./.venv"),
+        )
+        logger.info(
+            "Virtual environment directory (should be relative path): {}",
+            python_virtualenv_path,
+        )
+
         return PBTConfig(
             cwd=cwd,
             cache_dir=cache_dir,
@@ -122,7 +135,7 @@ class PBTConfig:
             use_prebuilt_binaries=set(cfg.get("use_prebuilt_binaries", [])),
             freeze_packages=set(cfg.get("freeze_packages", [])),
             distribution_dir=Path(cfg.get("distribution_dir", "./dist")),
-            python_virtualenvs_path=cfg.get("python_virtualenvs_path", "./.venv"),
+            python_virtualenv_path=python_virtualenv_path,
             python_path=Path(python_path) if python_path is not None else None,
             library_path=Path(cfg.get("library_path", "./libraries")),
             dependency_repos=cfg.get("dependency_repos", []),
@@ -144,7 +157,7 @@ class PBTConfig:
             return str(self.python_path)
         else:
             return sys.executable
-        
+
     @cache_method()
     def get_python_version(self) -> str:
         version = "".join(exec([self.get_python_path(), "--version"])).strip()

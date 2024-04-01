@@ -180,7 +180,7 @@ def mask_file(
 def venv_path(
     name: str,
     loc: Path,
-    virtualenv_dir: Path | str = "./venv",
+    virtualenv_dir: Path | str,
     python_path: str = sys.executable,
 ):
     """Get virtual environment path of the package, create it if doesn't exist.

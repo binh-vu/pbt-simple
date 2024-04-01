@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import os
 import shutil
-from collections import defaultdict
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Optional, cast
 
 import click
 from loguru import logger
-from tomlkit.api import document, dumps, inline_table, loads, nl, table
+from tomlkit.api import document, dumps, inline_table, nl, table
 from tomlkit.items import Array, KeyType, SingleKey, Trivia
 from tqdm.auto import tqdm
 
@@ -24,7 +23,6 @@ from sbt.misc import (
 from sbt.package.discovery import (
     discover_packages,
     parse_pep518_pyproject,
-    parse_version,
     parse_version_spec,
 )
 from sbt.package.graph import PkgGraph
@@ -183,7 +181,7 @@ def add(
         pkg_venv_path = venv_path(
             packages[package].name,
             packages[package].location,
-            cfg.python_virtualenvs_path,
+            cfg.python_virtualenv_path,
             cfg.get_python_path(),
         )
         install_bare_pkg(packages[package], cfg, pkg_venv_path)
@@ -262,7 +260,7 @@ def install_pkg(
     pkg_venv_path = venv_path(
         target_pkg.name,
         target_pkg.location,
-        cfg.python_virtualenvs_path,
+        cfg.python_virtualenv_path,
         cfg.get_python_path(),
     )
 
@@ -394,7 +392,7 @@ def install_poetry_package(
         virtualenv = venv_path(
             pkg.name,
             pkg.location,
-            cfg.python_virtualenvs_path,
+            cfg.python_virtualenv_path,
             cfg.get_python_path(),
         )
 

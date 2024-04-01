@@ -1,33 +1,12 @@
 from __future__ import annotations
 
 import os
-import shutil
-from collections import defaultdict
-from pathlib import Path
-from typing import Any, Optional, cast
 
 import click
-from loguru import logger
 from sbt.config import PBTConfig
-from sbt.misc import (
-    ExecProcessError,
-    IncompatibleDependencyError,
-    NewEnvVar,
-    exec,
-    mask_file,
-    venv_path,
-)
 from sbt.package.discovery import (
     discover_packages,
-    parse_pep518_pyproject,
-    parse_version,
-    parse_version_spec,
 )
-from sbt.package.graph import PkgGraph
-from sbt.package.package import DepConstraint, DepConstraints, Package
-from tomlkit.api import document, dumps, inline_table, loads, nl, table
-from tomlkit.items import Array, KeyType, SingleKey, Trivia
-from tqdm.auto import tqdm
 
 # environment variables that will be passed to the subprocess
 PASSTHROUGH_ENVS = [
