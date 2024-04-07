@@ -8,6 +8,8 @@ from typing import cast
 
 import semver
 from loguru import logger
+from tomlkit.api import loads
+
 from sbt.misc import InvalidPackageError
 from sbt.package.package import (
     DepConstraint,
@@ -16,7 +18,6 @@ from sbt.package.package import (
     PackageType,
     VersionSpec,
 )
-from tomlkit.api import loads
 
 
 def discover_packages(
@@ -25,9 +26,12 @@ def discover_packages(
     ignore_dirs: set[Path],
     ignore_dirnames: set[str],
     ignore_invalid_package: bool = False,
+    verbose: int = 0,
 ):
     """Find all packages in the given directory and manually linked/installed packages."""
-    candidate_pyprojects = get_candidate_pyprojects(root, ignore_dirs, ignore_dirnames)
+    candidate_pyprojects = get_candidate_pyprojects(
+        root, ignore_dirs, ignore_dirnames, verbose=verbose
+    )
 
     # mapping from package directory to its configuration
     pkgs: dict[str, Package] = {}
@@ -74,14 +78,18 @@ def discover_packages(
 
 
 def get_candidate_pyprojects(
-    root: Path, ignore_dirs: set[Path], ignore_dirnames: set[str]
+    root: Path, ignore_dirs: set[Path], ignore_dirnames: set[str], verbose: int = 0
 ) -> list[Path]:
     outs = {}
     root = root.resolve()
 
+    if verbose >= 3:
+        print("Scaning directories for packages...")
     stack = [root]
     while len(stack) > 0:
         dir = stack.pop()
+        if verbose >= 3:
+            print(dir)
         if (
             dir.name.startswith(".")
             or dir.name in ignore_dirnames
