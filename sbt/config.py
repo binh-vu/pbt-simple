@@ -129,8 +129,12 @@ class PBTConfig:
             cwd=cwd,
             cache_dir=cache_dir,
             ignore_packages=set(cfg.get("ignore_packages", [])),
-            ignore_directories=ignore_directories,
-            ignore_directory_names=ignore_directory_names,
+            ignore_directories=ignore_directories.union(
+                cfg.get("ignore_directories", [])
+            ),
+            ignore_directory_names=ignore_directory_names.union(
+                cfg.get("ignore_directory_names", [])
+            ),
             phantom_packages=set(cfg.get("phantom_packages", [])),
             use_prebuilt_binaries=set(cfg.get("use_prebuilt_binaries", [])),
             freeze_packages=set(cfg.get("freeze_packages", [])),
