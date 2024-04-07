@@ -75,8 +75,8 @@ def discover_packages(
 
 def get_candidate_pyprojects(
     root: Path, ignore_dirs: set[Path], ignore_dirnames: set[str]
-):
-    outs = []
+) -> list[Path]:
+    outs = {}
     root = root.resolve()
 
     stack = [root]
@@ -89,10 +89,10 @@ def get_candidate_pyprojects(
         ):
             continue
         if (dir / "pyproject.toml").exists():
-            outs.append(dir)
+            outs[dir.absolute()] = 1
         stack.extend([subdir for subdir in dir.iterdir() if subdir.is_dir()])
 
-    return outs
+    return list(outs.keys())
 
 
 def parse_pep518_pyproject(loc: Path) -> Package:
