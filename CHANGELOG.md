@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.4] - 2024-05-10
+
+### Fixed
+
+- Fix not able to install Poetry packages using `tool.poetry.include` to include extra files (such as css, js, html) in the final package
+
 ## [1.7.3] - 2024-04-07
 
 ### Fixed

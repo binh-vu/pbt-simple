@@ -21,7 +21,11 @@ class Package:
     location: Path
     type: PackageType
 
+    # equivalent to Poetry tool.poetry.packages -- for including packages that are located in different directories.
+    include_packages: list[str]
+    # equivalent to tool.poetry.include -- for files that will be included in the final package.
     include: list[str]
+
 
     dependencies: dict[str, DepConstraints]
 

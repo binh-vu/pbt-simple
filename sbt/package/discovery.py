@@ -158,7 +158,7 @@ def parse_maturin_project(cfg: dict, loc: Path) -> Package:
         if "include" in cfg["tool"]["maturin"]:
             include = cfg["tool"]["maturin"]["include"]
 
-    return Package(name, version, loc, PackageType.Maturin, include, dependencies)
+    return Package(name=name, version=version, location=loc, type=PackageType.Maturin, include_packages=[], include=include, dependencies=dependencies)
 
 
 def parse_poetry_project(cfg: dict, loc: Path) -> Package:
@@ -179,11 +179,11 @@ def parse_poetry_project(cfg: dict, loc: Path) -> Package:
     # see https://python-poetry.org/docs/pyproject/#include-and-exclude
     # and https://python-poetry.org/docs/pyproject/#packages
     include = cfg["tool"]["poetry"].get("include", [])
+    include_packages = []
     for pkg_cfg in cfg["tool"]["poetry"].get("packages", []):
-        include.append(os.path.join(pkg_cfg.get("from", ""), pkg_cfg["include"]))
-    include = sorted(set(include))
+        include_packages.append(os.path.join(pkg_cfg.get("from", ""), pkg_cfg["include"]))
 
-    return Package(name, version, loc, PackageType.Poetry, include, dependencies)
+    return Package(name=name, version=version, location=loc, type=PackageType.Poetry, include_packages=include_packages, include=include, dependencies=dependencies)
 
 
 def parse_pep518_pkgname_with_extra(name: str) -> tuple[str, list[str]]:

@@ -81,7 +81,7 @@ def build(package: str, cwd: str = ".", release: bool = False, verbose: bool = F
     pkg_name = pkg.name.replace("-", "_")
     pkg_dir = outdir / pkg_name
     if not pkg_dir.exists():
-        for name in pkg.include:
+        for name in pkg.include_packages:
             pkg_name = name.replace("-", "_")
             pkg_dir = outdir / pkg_name
             if pkg_dir.exists():

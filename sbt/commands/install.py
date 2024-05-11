@@ -292,8 +292,11 @@ def install_bare_pkg(pkg: Package, cfg: PBTConfig, virtualenv: Optional[Path] = 
             tbl.add("version", pkg.version)
             tbl.add("description", "")
             tbl.add("authors", [])
-            if sum(int(x != pkg.name) for x in pkg.include) > 0:
-                tbl.add("packages", [{"include": x} for x in pkg.include])
+            if sum(int(x != pkg.name) for x in pkg.include_packages) > 0:
+                tbl.add("packages", [{"include": x} for x in pkg.include_packages])
+
+            if len(pkg.include) > 0:
+                tbl.add("include", pkg.include)
 
             doc.add(SingleKey("tool.poetry", t=KeyType.Bare), tbl)
 
@@ -323,8 +326,11 @@ def install_pkg_dependencies(
         tbl.add("description", "")
         tbl.add("authors", [])
 
-        if sum(int(x != pkg.name) for x in pkg.include) > 0:
-            tbl.add("packages", [{"include": x} for x in pkg.include])
+        if sum(int(x != pkg.name) for x in pkg.include_packages) > 0:
+            tbl.add("packages", [{"include": x} for x in pkg.include_packages])
+
+        if len(pkg.include) > 0:
+            tbl.add("include", pkg.include)
 
         doc.add(SingleKey("tool.poetry", t=KeyType.Bare), tbl)
 
