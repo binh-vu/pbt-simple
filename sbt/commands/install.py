@@ -171,7 +171,8 @@ def add(
     # step 2: update the list of manually installed
     pkg_cache_dir = cfg.pkg_cache_dir(packages[package])
     manual_deps = packages[package].find_manually_installed_dependencies(pkg_cache_dir)
-    manual_deps.append(deppkg.location)
+    if deppkg.location not in manual_deps:
+        manual_deps.append(deppkg.location)
     packages[package].save_manually_installed_dependencies(
         pkg_cache_dir, sorted(set(manual_deps))
     )

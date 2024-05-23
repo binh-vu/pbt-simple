@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.5] - 2024-05-22
+
+### Fixed
+
+- Fix `sbt add` command to ignore error when adding a package that is already added
+
 ## [1.7.4] - 2024-05-10
 
 ### Fixed
