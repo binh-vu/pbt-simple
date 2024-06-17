@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.0] - 2024-06-17
+
+### Changed
+
+- When install local packages, their dependencies are also installed by default unless users choose to disable them via `--no-dep-dep` flag
+
 ## [1.7.5] - 2024-05-22
 
 ### Fixed

@@ -63,6 +63,9 @@ PASSTHROUGH_ENVS = [
     help="Install all discovered packages as dependencies of the target one",
 )
 @click.option(
+    "--no-dep-dep", is_flag=True, help="Do not install dependencies of the local dependencies"
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -74,6 +77,7 @@ def install(
     ignore_invalid_pkg: bool = False,
     ignore_invalid_dependency: bool = False,
     all_packages: bool = False,
+    no_dep_dep: bool = False,
     verbose: bool = False,
 ):
     """Install a package and its local dependencies in editable mode"""
@@ -102,7 +106,7 @@ def install(
     if all_packages:
         local_dep_pkgs = [pkg for pkg in packages.values() if pkg.name != package]
     install_pkg(
-        packages[package], packages, cfg, ignore_invalid_dependency, local_dep_pkgs
+        packages[package], packages, cfg, ignore_invalid_dependency, local_dep_pkgs, no_dep_dep
     )
 
 
@@ -198,10 +202,11 @@ def install_pkg(
     cfg: PBTConfig,
     ignore_invalid_dependency: bool,
     local_dep_pkgs: Optional[list[Package]],
+    no_dep_dep: bool = False,
 ):
     loc2pkg = {pkg.location: pkg for pkg in packages.values()}
 
-    # step 0: gather dependencies of the package -- include the one from manually installed packages
+    # step 0: gather dependencies of the package -- include the one from manually installed packages & local dep packages
     target_pkg.dependencies.update(
         {
             (p := loc2pkg[loc]).name: [
@@ -217,34 +222,40 @@ def install_pkg(
     thirdparty_pkgs: dict[str, tuple[set[str], DepConstraints]] = {}
     invalid_thirdparty_pkgs: set[str] = set()
 
-    for thirdparty_pkg in pkg_graph.third_party_dependencies(target_pkg.name):
-        assert thirdparty_pkg.name not in thirdparty_pkgs
-        depspecs = None
-        for p, pc in thirdparty_pkg.invert_dependencies.items():
-            if depspecs is None:
-                depspecs = pc
-            else:
-                try:
-                    depspecs = find_common_specs(depspecs, pc)
-                except IncompatibleDependencyError:
-                    logger.error(
-                        "Encounter an incompatible dependency {}. Found it in:\n{}",
-                        thirdparty_pkg.name,
-                        "\n".join(
-                            f"\t- {packages[pkgname].location}"
-                            for pkgname in thirdparty_pkg.invert_dependencies.keys()
-                        ),
-                    )
+    pkgnames = [target_pkg.name]
+    if not no_dep_dep and local_dep_pkgs is not None:
+        pkgnames.extend(p.name for p in local_dep_pkgs)
 
-                    if ignore_invalid_dependency:
-                        invalid_thirdparty_pkgs.add(thirdparty_pkg.name)
-                    else:
-                        raise
-        assert depspecs is not None
-        thirdparty_pkgs[thirdparty_pkg.name] = (
-            set(thirdparty_pkg.invert_dependencies.keys()),
-            depspecs,
-        )
+    for pkgname in pkgnames:
+        for thirdparty_pkg in pkg_graph.third_party_dependencies(pkgname):
+            if thirdparty_pkg.name in thirdparty_pkgs:
+                continue
+            depspecs = None
+            for p, pc in thirdparty_pkg.invert_dependencies.items():
+                if depspecs is None:
+                    depspecs = pc
+                else:
+                    try:
+                        depspecs = find_common_specs(depspecs, pc)
+                    except IncompatibleDependencyError:
+                        logger.error(
+                            "Encounter an incompatible dependency {}. Found it in:\n{}",
+                            thirdparty_pkg.name,
+                            "\n".join(
+                                f"\t- {packages[pkgname].location}"
+                                for pkgname in thirdparty_pkg.invert_dependencies.keys()
+                            ),
+                        )
+
+                        if ignore_invalid_dependency:
+                            invalid_thirdparty_pkgs.add(thirdparty_pkg.name)
+                        else:
+                            raise
+            assert depspecs is not None
+            thirdparty_pkgs[thirdparty_pkg.name] = (
+                set(thirdparty_pkg.invert_dependencies.keys()),
+                depspecs,
+            )
 
     # now install the target package
     # step 1: gather all dependencies in one file and install it.
