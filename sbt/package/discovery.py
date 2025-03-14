@@ -8,8 +8,6 @@ from typing import cast
 
 import semver
 from loguru import logger
-from tomlkit.api import loads
-
 from sbt.misc import InvalidPackageError
 from sbt.package.package import (
     DepConstraint,
@@ -18,6 +16,7 @@ from sbt.package.package import (
     PackageType,
     VersionSpec,
 )
+from tomlkit.api import loads
 
 
 def discover_packages(
@@ -68,7 +67,7 @@ def discover_packages(
                 logger.warning(f"An package at {loc} is invalid. Ignore it. Error: {e}")
                 continue
 
-            if pkg.name in pkgs:
+            if pkg.name in pkgs and pkg.location != pkgs[pkg.name].location:
                 raise RuntimeError(
                     f"Duplicate package {pkg.name}: found in {pkg.location} and {pkgs[pkg.name].location}"
                 )
@@ -158,7 +157,15 @@ def parse_maturin_project(cfg: dict, loc: Path) -> Package:
         if "include" in cfg["tool"]["maturin"]:
             include = cfg["tool"]["maturin"]["include"]
 
-    return Package(name=name, version=version, location=loc, type=PackageType.Maturin, include_packages=[], include=include, dependencies=dependencies)
+    return Package(
+        name=name,
+        version=version,
+        location=loc,
+        type=PackageType.Maturin,
+        include_packages=[],
+        include=include,
+        dependencies=dependencies,
+    )
 
 
 def parse_poetry_project(cfg: dict, loc: Path) -> Package:
@@ -181,9 +188,19 @@ def parse_poetry_project(cfg: dict, loc: Path) -> Package:
     include = cfg["tool"]["poetry"].get("include", [])
     include_packages = []
     for pkg_cfg in cfg["tool"]["poetry"].get("packages", []):
-        include_packages.append(os.path.join(pkg_cfg.get("from", ""), pkg_cfg["include"]))
+        include_packages.append(
+            os.path.join(pkg_cfg.get("from", ""), pkg_cfg["include"])
+        )
 
-    return Package(name=name, version=version, location=loc, type=PackageType.Poetry, include_packages=include_packages, include=include, dependencies=dependencies)
+    return Package(
+        name=name,
+        version=version,
+        location=loc,
+        type=PackageType.Poetry,
+        include_packages=include_packages,
+        include=include,
+        dependencies=dependencies,
+    )
 
 
 def parse_pep518_pkgname_with_extra(name: str) -> tuple[str, list[str]]:
