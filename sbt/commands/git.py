@@ -3,7 +3,6 @@ from typing import Literal
 
 import click
 from loguru import logger
-
 from sbt.config import PBTConfig
 from sbt.vcs.git import Git
 
@@ -17,9 +16,10 @@ from sbt.vcs.git import Git
 @click.option("--cwd", default=".", help="Override current working directory")
 @click.argument("command", type=click.Choice(["sync-dep"]))
 def git(repo: str, cwd: str, command: Literal["sync-dep"]):
+    force = cwd != "."
     cwd = os.path.abspath(cwd)
+    cfg = PBTConfig.from_dir(cwd, force)
 
-    cfg = PBTConfig.from_dir(cwd)
     if command == "sync-dep":
         if not cfg.library_path.exists() and len(cfg.dependency_repos) == 0:
             return

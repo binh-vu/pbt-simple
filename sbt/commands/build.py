@@ -8,7 +8,6 @@ from uuid import uuid4
 
 import click
 from loguru import logger
-
 from sbt.commands.install import PASSTHROUGH_ENVS
 from sbt.config import PBTConfig
 from sbt.misc import exec
@@ -31,8 +30,9 @@ from sbt.package.discovery import discover_packages
     help="increase verbosity",
 )
 def build(package: str, cwd: str = ".", release: bool = False, verbose: bool = False):
+    force = cwd != "."
     cwd = os.path.abspath(cwd)
-    cfg = PBTConfig.from_dir(cwd)
+    cfg = PBTConfig.from_dir(cwd, force)
 
     # discovery packages
     packages = discover_packages(

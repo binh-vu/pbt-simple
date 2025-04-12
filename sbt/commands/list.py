@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 
 import click
-
 from sbt.config import PBTConfig
 from sbt.package.discovery import discover_packages
 
@@ -36,8 +35,9 @@ def list(
     ignore_invalid_pkg: bool = False,
     verbose: int = 0,
 ):
+    force = cwd != "."
     cwd = os.path.abspath(cwd)
-    cfg = PBTConfig.from_dir(cwd)
+    cfg = PBTConfig.from_dir(cwd, force)
 
     # discovery packages
     packages = discover_packages(

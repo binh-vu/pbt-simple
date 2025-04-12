@@ -8,7 +8,6 @@ from typing import Optional, Union
 
 import orjson
 from loguru import logger
-
 from sbt.misc import cache_method, exec
 from sbt.package.package import Package
 
@@ -47,35 +46,35 @@ class PBTConfig:
     dependency_repos: list[str] = field(default_factory=list)
 
     @staticmethod
-    def from_dir(cwd: Union[Path, str]) -> "PBTConfig":
-        # get git top module
-        # TODO: replace me
-        try:
-            output = exec(
-                "git rev-parse --show-superproject-working-tree --show-toplevel",
-                cwd="." if cwd == "" else cwd,
-            )
-            if len(output) == 1:
-                cwd = output[0]
-            else:
-                for i in range(len(output)):
-                    if all(
-                        output[j].startswith(output[i])
-                        for j in range(i + 1, len(output))
-                    ):
-                        cwd = output[i]
-                        break
+    def from_dir(cwd: Union[Path, str], force: bool = False) -> "PBTConfig":
+        if not force:
+            # get git top module
+            try:
+                output = exec(
+                    "git rev-parse --show-superproject-working-tree --show-toplevel",
+                    cwd="." if cwd == "" else cwd,
+                )
+                if len(output) == 1:
+                    cwd = output[0]
                 else:
-                    raise Exception(
-                        "Unreachable error. Can't figure out which folder contains your project. Congrat! You found a bug.\nAvailable options:\n"
-                        + "\n\t".join(output)
-                    )
-        except Exception as e:
-            if not str(e).startswith("fatal: not a git repository"):
-                # another error not related to git
-                raise
-            else:
-                cwd = cwd
+                    for i in range(len(output)):
+                        if all(
+                            output[j].startswith(output[i])
+                            for j in range(i + 1, len(output))
+                        ):
+                            cwd = output[i]
+                            break
+                    else:
+                        raise Exception(
+                            "Unreachable error. Can't figure out which folder contains your project. Congrat! You found a bug.\nAvailable options:\n"
+                            + "\n\t".join(output)
+                        )
+            except Exception as e:
+                if not str(e).startswith("fatal: not a git repository"):
+                    # another error not related to git
+                    raise
+                else:
+                    cwd = cwd
 
         cwd = Path(cwd).absolute()
         cache_dir = cwd / ".cache"

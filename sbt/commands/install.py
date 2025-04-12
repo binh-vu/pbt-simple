@@ -7,10 +7,6 @@ from typing import Optional, cast
 
 import click
 from loguru import logger
-from tomlkit.api import document, dumps, inline_table, nl, table
-from tomlkit.items import Array, KeyType, SingleKey, Trivia
-from tqdm.auto import tqdm
-
 from sbt.config import PBTConfig
 from sbt.misc import (
     ExecProcessError,
@@ -27,6 +23,9 @@ from sbt.package.discovery import (
 )
 from sbt.package.graph import PkgGraph
 from sbt.package.package import DepConstraint, DepConstraints, Package
+from tomlkit.api import document, dumps, inline_table, nl, table
+from tomlkit.items import Array, KeyType, SingleKey, Trivia
+from tqdm.auto import tqdm
 
 # environment variables that will be passed to the subprocess
 PASSTHROUGH_ENVS = [
@@ -63,7 +62,9 @@ PASSTHROUGH_ENVS = [
     help="Install all discovered packages as dependencies of the target one",
 )
 @click.option(
-    "--no-dep-dep", is_flag=True, help="Do not install dependencies of the local dependencies"
+    "--no-dep-dep",
+    is_flag=True,
+    help="Do not install dependencies of the local dependencies",
 )
 @click.option(
     "-v",
@@ -81,8 +82,9 @@ def install(
     verbose: bool = False,
 ):
     """Install a package and its local dependencies in editable mode"""
+    force = cwd != "."
     cwd = os.path.abspath(cwd)
-    cfg = PBTConfig.from_dir(cwd)
+    cfg = PBTConfig.from_dir(cwd, force)
 
     # discovery packages
     packages = discover_packages(
@@ -106,7 +108,12 @@ def install(
     if all_packages:
         local_dep_pkgs = [pkg for pkg in packages.values() if pkg.name != package]
     install_pkg(
-        packages[package], packages, cfg, ignore_invalid_dependency, local_dep_pkgs, no_dep_dep
+        packages[package],
+        packages,
+        cfg,
+        ignore_invalid_dependency,
+        local_dep_pkgs,
+        no_dep_dep,
     )
 
 
@@ -143,8 +150,9 @@ def add(
     verbose: bool = False,
 ):
     """Add a local package as a dependency to the target package"""
+    force = cwd != "."
     cwd = os.path.abspath(cwd)
-    cfg = PBTConfig.from_dir(cwd)
+    cfg = PBTConfig.from_dir(cwd, force)
 
     # discovery packages
     packages = discover_packages(
