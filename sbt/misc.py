@@ -21,7 +21,7 @@ class IncompatibleDependencyError(Exception):
     pass
 
 
-NewEnvVar = TypedDict("NewEnvVar", name=str, value=str)
+NewEnvVar = TypedDict("NewEnvVar", {"name": str, "value": str})
 
 
 def stdout(line):
