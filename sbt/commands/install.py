@@ -101,7 +101,8 @@ def install(
             package = loc2pkg[cfg.cwd].name
         else:
             raise ValueError(
-                f"Cannot find a package in the current directory {cfg.cwd}"
+                f"Cannot find a package in the current directory {cfg.cwd}. Currently discovered package locations are:"
+                + "".join(("\n\t- " + str(loc) for loc in loc2pkg.keys()))
             )
 
     local_dep_pkgs = None
